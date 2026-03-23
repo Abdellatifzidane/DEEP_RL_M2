@@ -1,5 +1,8 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+from environnements.base_env import BaseEnv
 from typing import List, Optional, Tuple
 import random
 
@@ -26,156 +29,121 @@ def check_winner(board: List[int]) -> int:
     return 0
 
 
-@dataclass
-class TicTacToeVsRandom:
+class TicTacToe(BaseEnv):
     """
-    Interactive environment:
-      - agent always plays X (+1)
-      - opponent plays O (-1) with random move
+    TicTacToe environment:
+    - Agent plays X (+1), opponent plays O (-1) randomly
+    - State: tuple of 9 integers (-1, 0, 1)
+    - Actions: 0-8 (board positions)
+    - Reward: +1 for win, -1 for loss, 0 for draw or ongoing
     """
 
-    seed: Optional[int] = None
-    board: List[int] = field(default_factory=lambda: [0] * 9)
+    def __init__(self, seed: Optional[int] = None):
+        self.seed = seed
+        self.rng = random.Random(seed)
+        self.board = None
+        self.done = False
+        self.score = 0.0
 
-    current_state: int = 0  # encoded integer state (optional convenience)
-    done: bool = False
-    last_reward: float = 0.0
-    score: float = 0.0
-
-    def __post_init__(self) -> None:
-        self.rng = random.Random(self.seed)
-        self._sync_state()
-
-    def reset(self) -> None:
+    def reset(self):
         self.board = [0] * 9
         self.done = False
-        self.last_reward = 0.0
         self.score = 0.0
-        self._sync_state()
+        return self.get_state()
 
-    def step(self, action: int) -> None:
-        """
-        action: int in [0..8]
-        if agent plays invalid action => immediate loss (-1) and terminal
-        sinon: agent plays, check end; if not end, random opponent plays, check end
-        """
+    def get_state(self):
+        # Return tuple for hashability
+        return tuple(self.board)
+
+    def get_available_actions(self):
         if self.done:
-            self.last_reward = 0.0
-            return
+            return []
+        return [i for i, v in enumerate(self.board) if v == 0]
 
-        #validate action
+    def step(self, action):
+        if self.done:
+            return self.get_state(), 0.0
+
+        # Validate action
         if action < 0 or action > 8 or self.board[action] != 0:
-            self.last_reward = -1.0
-            self.score += self.last_reward
+            # Invalid move: immediate loss
             self.done = True
-            self._sync_state()
-            return
+            self.score = -1.0
+            return self.get_state(), -1.0
 
-        #agent move (X= +1)
-        self.board[action] = +1
+        # Agent move (X = +1)
+        self.board[action] = 1
 
-        w = check_winner(self.board)
-        if w == +1:
-            self.last_reward = +1.0
-            self.score += self.last_reward
+        # Check if agent wins
+        if check_winner(self.board) == 1:
             self.done = True
-            self._sync_state()
-            return
+            self.score = 1.0
+            return self.get_state(), 1.0
 
+        # Check for draw
         if self._is_draw():
-            self.last_reward = 0.0
-            self.score += self.last_reward
             self.done = True
-            self._sync_state()
-            return
+            self.score = 0.0
+            return self.get_state(), 0.0
 
-        #opponent random move (O=-1)
+        # Opponent random move (O = -1)
         opp_action = self._random_legal_action()
         if opp_action is not None:
             self.board[opp_action] = -1
 
-        w = check_winner(self.board)
-        if w == -1:
-            self.last_reward = -1.0
-            self.score += self.last_reward
+        # Check if opponent wins
+        if check_winner(self.board) == -1:
             self.done = True
-            self._sync_state()
-            return
+            self.score = -1.0
+            return self.get_state(), -1.0
 
+        # Check for draw after opponent move
         if self._is_draw():
-            self.last_reward = 0.0
-            self.score += self.last_reward
             self.done = True
-            self._sync_state()
-            return
+            self.score = 0.0
+            return self.get_state(), 0.0
 
-        #continues
-        self.last_reward = 0.0
-        self.score += self.last_reward
-        self._sync_state()
+        # Game continues
+        return self.get_state(), 0.0
 
-    def get_state(self) -> int:
-        """returns an integer encoding of the board (base-3)"""
-        return self.current_state
-
-    def get_board(self) -> List[int]:
-        """returns raw board list of length 9."""
-        return list(self.board)
-
-    def get_available_actions(self) -> List[int]:
-        return [] if self.done else [i for i, v in enumerate(self.board) if v == 0]
-
-    def is_terminal(self) -> bool:
+    def is_terminal(self):
         return self.done
 
-    def get_score(self) -> float:
+    def get_score(self):
         return self.score
 
-    def get_last_reward(self) -> float:
-        return self.last_reward
-
-    def get_num_states(self) -> int:
-        return 3 ** 9
-
-    def _is_draw(self) -> bool:
+    def _is_draw(self):
         return all(v != 0 for v in self.board) and check_winner(self.board) == 0
 
-    def _random_legal_action(self) -> Optional[int]:
+    def _random_legal_action(self):
         legal = [i for i, v in enumerate(self.board) if v == 0]
         if not legal:
             return None
         return self.rng.choice(legal)
 
-    def _sync_state(self) -> None:
-        """
-        Encode board into base-3 integer:
-          empty=0 -> digit 0
-          X=+1    -> digit 1
-          O=-1    -> digit 2
-        """
-        mapping = {0: 0, +1: 1, -1: 2}
-        s = 0
-        power = 1
-        for cell in self.board:
-            s += mapping[cell] * power
-            power *= 3
-        self.current_state = s
-
-    def render(self) -> None:
-        symbols = {0: " ", +1: "X", -1: "O"}
+    def render(self):
+        symbols = {0: " ", 1: "X", -1: "O"}
         rows = []
         for r in range(3):
             rows.append(" | ".join(symbols[self.board[3*r + c]] for c in range(3)))
         print("\n---------\n".join(rows))
 
 
+# Mini demo
 if __name__ == "__main__":
-    env = TicTacToeVsRandom(seed=0)
-    env.reset()
+    env = TicTacToe(seed=0)
+    state = env.reset()
+    print("Initial state:", state)
+    print("Available actions:", env.get_available_actions())
 
-    while not env.is_terminal():
-        a = random.choice(env.get_available_actions())
-        env.step(a)
+    # Play a few moves
+    actions = [0, 4, 8]  # Example moves
+    for action in actions:
+        if not env.is_terminal():
+            next_state, reward = env.step(action)
+            print(f"Action {action}: state={next_state}, reward={reward}, terminal={env.is_terminal()}")
+            env.render()
+        else:
+            break
 
-    env.render()
-    print("done:", env.is_terminal(), "last_reward:", env.get_last_reward(), "score:", env.get_score())
+    print("Final score:", env.get_score())
