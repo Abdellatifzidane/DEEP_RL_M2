@@ -29,7 +29,7 @@ class game:
     def start_game(self):
             for i in range(16): # maximum NB_CELLS tours de jeu
                 if (self.first_action):
-                    index = self.player_01.choose_action(CHOOSE_PIECE,env)
+                    index = self.player_01.choose_action(CHOOSE_PIECE,self.env)
                     # appliquer l'action et mettre à jour l'état du jeu
                     self.env.apply_action(CHOOSE_PIECE,index)
                     # changer de joueur
@@ -44,7 +44,7 @@ class game:
                         print("Le joueur {} a gagné!".format(self.current_player_index))
                         break
                 else:
-                    index = self.player_02.choose_action(PLACE_PIECE,env)
+                    index = self.player_02.choose_action(PLACE_PIECE,self.env)
                     # appliquer l'action et mettre à jour l'état du jeu
                     self.env.apply_action(PLACE_PIECE,index)
                     # changer de joueur
@@ -57,7 +57,7 @@ class game:
                         print("Le joueur {} a gagné!".format(self.current_player_index))
                         break
 
-                    index = self.player_02.choose_action(CHOOSE_PIECE,env)
+                    index = self.player_02.choose_action(CHOOSE_PIECE,self.env)
                     self.env.apply_action(CHOOSE_PIECE,index)
                     self.current_player_index = 1 - self.current_player_index
                     print("Etat après l'action: {}".format(self.env.encode_state()))
@@ -65,7 +65,7 @@ class game:
                     print("encodage de  l'action: {}".format(self.env.action_encode(CHOOSE_PIECE,index)))
 
 
-                    index = self.player_01.choose_action(PLACE_PIECE,env)
+                    index = self.player_01.choose_action(PLACE_PIECE,self.env)
                     # appliquer l'action et mettre à jour l'état du jeu
                     self.env.apply_action(PLACE_PIECE,index)
                     print("Etat après l'action: {}".format(self.env.encode_state()))
@@ -78,53 +78,79 @@ class game:
                         break
 
                     # changer de joueur
-                    index = self.player_01.choose_action(CHOOSE_PIECE,env)
+                    index = self.player_01.choose_action(CHOOSE_PIECE,self.env)
                     self.env.apply_action(CHOOSE_PIECE,index)
                     self.current_player_index = 1 - self.current_player_index  
                     print("Etat après l'action: {}".format(self.env.encode_state()))            
                     print("le board après l'action: {}".format(self.env.board))
                     print("encodage de  l'action: {}".format(self.env.action_encode(CHOOSE_PIECE,index)))
 
+    def start_game_without_print(self):
+            for i in range(16): # maximum NB_CELLS tours de jeu
+                if (self.first_action):
+                    index = self.player_01.choose_action(CHOOSE_PIECE,self.env)
+                    if index is None:
+                        print("Aucune pièce disponible à choisir pour le joueur {}. Match nul!".format(self.current_player_index))
+                        break
+                    # appliquer l'action et mettre à jour l'état du jeu
+                    self.env.apply_action(CHOOSE_PIECE,index)
+                    # changer de joueur
+                    self.current_player_index = 1 - self.current_player_index
+                    self.first_action = False
+                    win =  self.env.check_win()
+                    if win:
+                        print("Le joueur {} a gagné!".format(self.current_player_index))
+                        break
+                else:
+                    index = self.player_02.choose_action(PLACE_PIECE,self.env)
+                    if index is None:
+                        print("Aucune pièce disponible à choisir pour le joueur {}. Match nul!".format(self.current_player_index))
+                        break
+                    # appliquer l'action et mettre à jour l'état du jeu
+                    self.env.apply_action(PLACE_PIECE,index)
+                    # changer de joueur
+                    win =  self.env.check_win()
+                    if win:
+                        print("Le joueur {} a gagné!".format(self.current_player_index))
+                        break
 
-env = Quatro()
+                    index = self.player_02.choose_action(CHOOSE_PIECE,self.env)
+                    if index is None:
+                        print("Aucune pièce disponible à choisir pour le joueur {}. Match nul!".format(self.current_player_index))
+                        break
+                    self.env.apply_action(CHOOSE_PIECE,index)
+                    self.current_player_index = 1 - self.current_player_index
+                    index = self.player_01.choose_action(PLACE_PIECE,self.env)
+                    if index is None:
+                        print("Aucune pièce disponible à choisir pour le joueur {}. Match nul!".format(self.current_player_index))
+                        break
+                    # appliquer l'action et mettre à jour l'état du jeu
+                    self.env.apply_action(PLACE_PIECE,index)
 
-player_01 = RandomPlayer()
-player_02 = RandomPlayer()
+                    win =  self.env.check_win()
+                    if win:
+                        print("Le joueur {} a gagné!".format(self.current_player_index))
+                        break
 
-game_test = game(env, player_01, player_02)
-
-state = game_test.env.encode_state()
-
-print("Etat initial du jeu: {}".format(state))
-
-game_test.start_game()
-
-
-# # deuxième joueur -----------------------------------------
-
-# game_test.step(1, 4) 
-
-# state = game_test.env.encode_state()
-
-# print("Etat du jeu après l'action: {}".format(state))
-
-# game_test.step(0, 12)
-
-# state = game_test.env.encode_state()
-
-# print("Etat du jeu après l'action: {}".format(state))
+                    # changer de joueur
+                    index = self.player_01.choose_action(CHOOSE_PIECE,self.env)
+                    if index is None:
+                        print("Aucune pièce disponible à choisir pour le joueur {}. Match nul!".format(self.current_player_index))
+                        break
+                    self.env.apply_action(CHOOSE_PIECE,index)
+                    self.current_player_index = 1 - self.current_player_index  
 
 
-# # Premier Joueur ------------------------------------
+if __name__ == "__main__":
+    env = Quatro()
 
-# game_test.step(1, 0)
+    player_01 = RandomPlayer()
+    player_02 = RandomPlayer()
 
-# state = game_test.env.encode_state()
+    game_test = game(env, player_01, player_02)
 
-# print("Etat du jeu après l'action: {}".format(state))
+    state = game_test.env.encode_state()
 
-# game_test.step(0, 7)
+    print("Etat initial du jeu: {}".format(state))
 
-# state = game_test.env.encode_state()
-
-# print("Etat du jeu après l'action: {}".format(state))
+    game_test.start_game()

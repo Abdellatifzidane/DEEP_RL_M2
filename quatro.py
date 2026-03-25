@@ -7,13 +7,13 @@ BOARD_SIZE = 4
 NB_CELLS = 16
 NB_PIECES = 16
 NB_ATTRS = 4  # taille, couleur, forme, remplissage
-NB_ACTION_TYPES = 1
+NB_ACTION_TYPES = 2 # choisir une pièce ou poser une pièce
 from enum import Enum
 
 PIECES = list(itertools.product([-1,1], repeat=NB_ATTRS))
 
-for i, piece in enumerate(PIECES):
-    print("Pièce {}: {}".format(i, piece))
+# for i, piece in enumerate(PIECES):
+#     print("Pièce {}: {}".format(i, piece))
 
 
 class Quatro:
