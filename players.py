@@ -24,13 +24,19 @@ class HumanPlayer(Player):
         if action_type == 0: # choisir une pièce
             available_pieces = [i for i, available in enumerate(env.ramaining_pieces) if available]
             print("Pièces disponibles: {}".format(available_pieces))
-            piece_index = int(input("Choisissez une pièce : "))
-            return piece_index
+            if not available_pieces:
+                return None
+            else:
+                piece_index = int(input("Choisissez une pièce : "))
+                return piece_index
         elif action_type == 1: # poser la pièce
             available_pieces = [i for i, available in enumerate(env.remaining_cells) if available]
-            print("Cellules disponibles: {}".format(available_pieces))
-            cell_index = int(input("Choisissez une cellule : "))
-            return cell_index
+            if not available_pieces:
+                return None   
+            else:   
+                print("Cellules disponibles: {}".format(available_pieces))
+                cell_index = int(input("Choisissez une cellule : "))
+                return cell_index
         
             
 class RandomPlayer(Player):
@@ -41,9 +47,13 @@ class RandomPlayer(Player):
         # choisir une action aléatoire parmi les actions autorisées
         if action_type == 0: # choisir une pièce
             available_pieces = [i for i, available in enumerate(env.ramaining_pieces) if available]
+            if not available_pieces:
+                return None
             return random.choice(available_pieces)
         elif action_type == 1: # poser la pièce
             available_cells = [i for i, available in enumerate(env.remaining_cells) if available]
+            if not available_cells:
+                return None
             return random.choice(available_cells)    
 
 
