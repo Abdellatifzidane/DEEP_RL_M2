@@ -1,2 +1,3 @@
 test_name,num_episodes,wins_player1,wins_player2,draws,win_rate_p1,win_rate_p2
 random_vs_random,1000,469,512,19,0.469,0.512
+random_vs_random,1000,978,0,22,0.978,0.0

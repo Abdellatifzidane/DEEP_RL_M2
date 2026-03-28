@@ -20,14 +20,11 @@ class Quatro(BaseEnv):
     """
     Quarto environment compatible avec BaseEnv.
 
-    Jeu à deux joueurs, chaque joueur appelle step() à son tour.
-      - reset() : état initial, current_piece = None
-      - Premier step : le joueur 1 choisit une pièce → action = piece_index (0-15)
-      - Steps suivants : poser la pièce courante + choisir la prochaine
-        → action = cell_index * NB_PIECES + piece_index
-      - Dernier step (plus de pièces à choisir) : juste poser
-        → action = cell_index
-      - reward : +1 victoire du joueur qui vient de poser, 0 sinon
+    Action = (type, index) :
+      - (0, i) : choisir la pièce i pour l'adversaire
+      - (1, j) : poser la pièce courante sur la case j
+    State = tuple(68) : 16 cases × 4 attributs + 4 attributs pièce courante
+    Reward : +1 victoire, 0 sinon
     """
 
     def __init__(self, seed=None):
@@ -58,45 +55,29 @@ class Quatro(BaseEnv):
         if self.done:
             return []
 
-        # Phase 1 : choisir une pièce (pas de pièce courante à poser)
         if self.current_piece is None:
-            return [i for i, v in enumerate(self.ramaining_pieces) if v == 1]
-
-        # Phase 2 : poser la pièce + choisir la prochaine
-        free_cells = [i for i, v in enumerate(self.remaining_cells) if v == 1]
-        avail_pieces = [i for i, v in enumerate(self.ramaining_pieces) if v == 1]
-
-        if avail_pieces:
-            return [cell * NB_PIECES + piece
-                    for cell in free_cells for piece in avail_pieces]
+            # type 0 : choisir une pièce
+            return [(0, i) for i, v in enumerate(self.ramaining_pieces) if v == 1]
         else:
-            # Dernier placement, plus de pièce à choisir
-            return list(free_cells)
+            # type 1 : poser la pièce courante
+            return [(1, j) for j, v in enumerate(self.remaining_cells) if v == 1]
 
     def step(self, action):
         if self.done:
             return self.get_state(), 0.0
 
-        # Phase 1 : choisir une pièce pour l'adversaire
-        if self.current_piece is None:
-            self.current_piece = PIECES[action]
-            self.ramaining_pieces[action] = 0
+        action_type, index = action
+
+        if action_type == 0:
+            # choisir une pièce pour l'adversaire
+            self.current_piece = PIECES[index]
+            self.ramaining_pieces[index] = 0
             self.current_player = 1 - self.current_player
             return self.get_state(), 0.0
 
-        # Phase 2 : poser + choisir
-        avail_pieces = [i for i, v in enumerate(self.ramaining_pieces) if v == 1]
-
-        if avail_pieces:
-            cell_index = action // NB_PIECES
-            piece_index = action % NB_PIECES
-        else:
-            cell_index = action
-            piece_index = None
-
-        # Poser la pièce courante
-        self.board[cell_index] = self.current_piece
-        self.remaining_cells[cell_index] = 0
+        # action_type == 1 : poser la pièce courante
+        self.board[index] = self.current_piece
+        self.remaining_cells[index] = 0
         self.current_piece = None
 
         if self.check_win():
@@ -109,12 +90,7 @@ class Quatro(BaseEnv):
             self._score = 0.0
             return self.get_state(), 0.0
 
-        # Choisir la pièce pour l'adversaire
-        if piece_index is not None:
-            self.current_piece = PIECES[piece_index]
-            self.ramaining_pieces[piece_index] = 0
-
-        self.current_player = 1 - self.current_player
+        # pas de changement de joueur : il doit encore choisir une pièce
         return self.get_state(), 0.0
 
     def is_terminal(self):
