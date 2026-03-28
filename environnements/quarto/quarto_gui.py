@@ -381,20 +381,15 @@ class QuartoGUI:
 
         avail_pieces = [i for i, v in enumerate(self.env.ramaining_pieces) if v == 1]
 
-        if not avail_pieces:
-            # derniere piece a poser, pas de choix supplementaire
-            _, reward = self.env.step(cell)
-            self.selected_cell = None
-            self._refresh()
-            if self.env.is_terminal():
-                self._game_over(reward)
-            else:
-                self._next_turn()
+        # poser la piece sur la case
+        _, reward = self.env.step((1, cell))
+        self.selected_cell = None
+        self._refresh()
+
+        if self.env.is_terminal():
+            self._game_over(reward)
         else:
-            # stocker la case, attendre le choix de piece
-            self.selected_cell = cell
-            self._refresh()
-            self._update_human_status()
+            self._next_turn()
 
     def _on_piece_click(self, event):
         """Clic sur le panneau de pieces : le joueur choisit une piece."""
@@ -413,25 +408,8 @@ class QuartoGUI:
             self.status_var.set("Piece indisponible !")
             return
 
-        # ---- Phase 1 : juste choisir une piece (pas de piece a poser) ----
-        if self.env.current_piece is None:
-            _, reward = self.env.step(piece_idx)
-            self.selected_cell = None
-            self._refresh()
-            if self.env.is_terminal():
-                self._game_over(reward)
-            else:
-                self._next_turn()
-            return
-
-        # ---- Phase 2 : il faut d'abord avoir selectionne une case ----
-        if self.selected_cell is None:
-            self.status_var.set("Placez d'abord votre piece sur le plateau !")
-            return
-
-        # combiner case + piece en une seule action
-        action = self.selected_cell * NB_PIECES + piece_idx
-        _, reward = self.env.step(action)
+        # choisir une piece pour l'adversaire
+        _, reward = self.env.step((0, piece_idx))
         self.selected_cell = None
         self._refresh()
 
