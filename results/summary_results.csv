@@ -1,0 +1,4 @@
+agent,mean_avg_score,num_tests,mean_avg_reward,mean_avg_train_loss
+DQN,1.0,3,,0.012247243742305666
+Random,0.1,1,-0.1412,
+Tabular Q-Learning,1.0,3,,

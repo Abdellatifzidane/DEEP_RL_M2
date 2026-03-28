@@ -1,0 +1,4 @@
+config_name,alpha,gamma,epsilon_start,epsilon_min,epsilon_decay,num_episodes,avg_score,final_epsilon
+config_1,0.1,0.95,1.0,0.05,0.995,5000,0.96,0.05
+config_2,0.05,0.99,1.0,0.1,0.99,5000,0.96,0.1
+config_3,0.2,0.9,1.0,0.05,0.98,5000,0.95,0.05

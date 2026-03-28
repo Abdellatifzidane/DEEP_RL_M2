@@ -1,0 +1,2 @@
+test_name,num_episodes,avg_score,avg_reward
+random_baseline,100,0.34,0.34
