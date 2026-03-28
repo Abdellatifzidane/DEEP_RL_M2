@@ -1,16 +1,5 @@
 """
-Quarto GUI - Interface graphique simple pour jouer au Quarto.
-
-Modes supportes :
-    Random vs Random, Random vs Human, Human vs Human,
-    Human vs Agent, Agent vs Agent, etc.
-
-Utilise l'environnement Quarto existant comme moteur de jeu.
-
-Usage :
-    python quarto_gui.py
-
-Pour brancher un agent entraine, modifier la methode _load_agent().
+Quarto GUI - Interface graphique Tkinter pour jouer au Quarto.
 """
 
 import tkinter as tk
@@ -24,9 +13,6 @@ from environnements.quarto.quatro import Quatro, PIECES, NB_PIECES, NB_CELLS
 from agents.random import RandomAgent
 
 
-# =====================================================================
-#  CONSTANTES VISUELLES
-# =====================================================================
 CELL_SIZE = 100          # taille d'une case du plateau (px)
 PIECE_PANEL_SIZE = 65    # taille d'une case du panneau de pieces (px)
 AI_DELAY_MS = 400        # delai entre coups IA (ms)
@@ -35,17 +21,8 @@ AI_DELAY_MS = 400        # delai entre coups IA (ms)
 PIECE_COLORS = {-1: "#2980b9", 1: "#c0392b"}
 
 
-# =====================================================================
-#  DESSIN D'UNE PIECE
-# =====================================================================
-# Chaque piece a 4 attributs binaires (-1 ou +1) :
-#   0: taille   -> petit (-1) / grand (+1)
-#   1: couleur  -> bleu  (-1) / rouge (+1)
-#   2: forme    -> rond  (-1) / carre (+1)
-#   3: rempli   -> creux (-1) / plein (+1)
 
 def draw_piece(canvas, cx, cy, piece, max_radius=20):
-    """Dessine une piece sur le canvas au centre (cx, cy)."""
     attr_size, attr_color, attr_shape, attr_fill = piece
 
     # --- taille ---
@@ -72,9 +49,6 @@ def draw_piece(canvas, cx, cy, piece, max_radius=20):
         )
 
 
-# =====================================================================
-#  CLASSE PRINCIPALE
-# =====================================================================
 class QuartoGUI:
 
     def __init__(self, root):
@@ -85,18 +59,11 @@ class QuartoGUI:
         self.env = Quatro()
         self.game_running = False
 
-        # agents[i] = None  -> joueur humain
-        # agents[i] = objet -> IA (doit avoir choose_action ou select_action)
         self.agents = [None, None]
-
-        # Phase 2 humaine : on selectionne d'abord la case, puis la piece
         self.selected_cell = None
 
         self._build_ui()
 
-    # -----------------------------------------------------------------
-    #  CONSTRUCTION DE L'INTERFACE
-    # -----------------------------------------------------------------
     def _build_ui(self):
         # ---- barre de controle ----
         ctrl = ttk.Frame(self.root, padding=10)
@@ -175,9 +142,6 @@ class QuartoGUI:
 
         self._refresh()
 
-    # -----------------------------------------------------------------
-    #  DESSIN
-    # -----------------------------------------------------------------
     def _draw_board(self):
         c = self.board_canvas
         c.delete("all")
@@ -238,9 +202,6 @@ class QuartoGUI:
         self._draw_pieces()
         self._draw_current_piece()
 
-    # -----------------------------------------------------------------
-    #  CONTROLE DU JEU
-    # -----------------------------------------------------------------
     def start_game(self):
         self.env.reset()
         self.selected_cell = None
@@ -277,32 +238,10 @@ class QuartoGUI:
         self._refresh()
 
     def _load_agent(self, player_index):
-        """
-        Charge un agent entraine pour le joueur donne.
-
-        ---------------------------------------------------------------
-        PAR DEFAUT : utilise RandomAgent (placeholder).
-        POUR UTILISER VOTRE AGENT ENTRAINE, remplacez le contenu de
-        cette methode. Exemple :
-
-            import pickle
-            with open("mon_agent.pkl", "rb") as f:
-                agent = pickle.load(f)
-            return agent
-
-        L'agent doit avoir :
-          - choose_action(env)  -> action
-          OU
-          - select_action(state, actions, training=False) -> action
-        ---------------------------------------------------------------
-        """
+        """Placeholder : remplacer par un agent entraine."""
         return RandomAgent()
 
-    # -----------------------------------------------------------------
-    #  BOUCLE DE JEU
-    # -----------------------------------------------------------------
     def _next_turn(self):
-        """Determine si c'est un tour IA ou humain et agit."""
         if not self.game_running or self.env.is_terminal():
             return
 
@@ -347,7 +286,6 @@ class QuartoGUI:
             self._next_turn()
 
     def _get_agent_action(self, agent):
-        """Compatible avec RandomAgent, TabularQ et DQN."""
         if hasattr(agent, "choose_action"):
             return agent.choose_action(self.env)
         if hasattr(agent, "select_action"):
@@ -356,15 +294,11 @@ class QuartoGUI:
             return agent.select_action(state, actions, training=False)
         return None
 
-    # -----------------------------------------------------------------
-    #  INTERACTIONS HUMAINES
-    # -----------------------------------------------------------------
     def _on_board_click(self, event):
-        """Clic sur le plateau : le joueur humain pose sa piece."""
         if not self.game_running or self.env.is_terminal():
             return
         if self.agents[self.env.current_player] is not None:
-            return   # pas le tour d'un humain
+            return
         if self.env.current_piece is None:
             self.status_var.set("Choisissez d'abord une piece (panneau de droite).")
             return
@@ -392,7 +326,6 @@ class QuartoGUI:
             self._next_turn()
 
     def _on_piece_click(self, event):
-        """Clic sur le panneau de pieces : le joueur choisit une piece."""
         if not self.game_running or self.env.is_terminal():
             return
         if self.agents[self.env.current_player] is not None:
@@ -418,9 +351,6 @@ class QuartoGUI:
         else:
             self._next_turn()
 
-    # -----------------------------------------------------------------
-    #  FIN DE PARTIE
-    # -----------------------------------------------------------------
     def _game_over(self, reward):
         self.game_running = False
         self.start_btn.config(state="normal")
@@ -436,9 +366,6 @@ class QuartoGUI:
             self.status_var.set("Match nul !")
 
 
-# =====================================================================
-#  POINT D'ENTREE
-# =====================================================================
 if __name__ == "__main__":
     root = tk.Tk()
     QuartoGUI(root)

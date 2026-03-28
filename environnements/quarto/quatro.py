@@ -36,7 +36,6 @@ class Quatro(BaseEnv):
         self._score = 0.0
         self.current_player = 0  # 0 ou 1
 
-    # ── BaseEnv interface ────────────────────────────────────────────
 
     def reset(self):
         self.board = [None] * NB_CELLS
@@ -90,7 +89,6 @@ class Quatro(BaseEnv):
             self._score = 0.0
             return self.get_state(), 0.0
 
-        # pas de changement de joueur : il doit encore choisir une pièce
         return self.get_state(), 0.0
 
     def is_terminal(self):
@@ -99,7 +97,6 @@ class Quatro(BaseEnv):
     def get_score(self):
         return self._score
 
-    # ── Méthodes internes ────────────────────────────────────────────
 
     def _build_state_list(self):
         state = []
@@ -117,7 +114,6 @@ class Quatro(BaseEnv):
     def _is_board_full(self):
         return all(v == 0 for v in self.remaining_cells)
 
-    # ── Legacy API (utilisée par game.py et Players) ─────────────────
 
     def encode_state(self):
         return np.array(self._build_state_list())
