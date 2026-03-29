@@ -1,2 +1,5 @@
-test_name,grid_size,num_episodes,avg_score,avg_reward
-random_baseline,5,50,0.1,-0.14120000000000002
+test_name,agent,grid_size,num_episodes,avg_score,avg_reward,execution_time_sec
+random_1000_episodes,RandomAgent,5,1000,0.173,-0.06270000000000003,0.12211227416992188
+random_10000_episodes,RandomAgent,5,10000,0.17,-0.06555000000000016,0.9270713329315186
+random_100000_episodes,RandomAgent,5,100000,0.1631,-0.07287179999999224,5.770535945892334
+random_1000000_episodes,RandomAgent,5,1000000,0.161116,-0.07499975999999904,54.76377892494202

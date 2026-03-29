@@ -1,0 +1,4 @@
+agent,config_name,num_episodes,avg_score,execution_time_sec
+DQN,config_2,1000,1.0,38.769439697265625
+Tabular Q-Learning,config_1,1000,1.0,0.1819651126861572
+Random,random_1000_episodes,1000,0.173,0.1221122741699218

@@ -1,6 +1,7 @@
 import csv
 import os
 import sys
+import time  # 👈 AJOUT
 
 # Fix import path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -12,7 +13,7 @@ from agents.tabular_qlearning import TabularQLearningAgent
 # =========================
 # CONFIGURATIONS (hyperparamètres)
 # =========================
-TEST_CONFIGS = [
+BASE_CONFIGS = [
     {
         "name": "config_1",
         "alpha": 0.1,
@@ -20,7 +21,6 @@ TEST_CONFIGS = [
         "epsilon": 1.0,
         "epsilon_min": 0.05,
         "epsilon_decay": 0.995,
-        "num_episodes": 300,
     },
     {
         "name": "config_2",
@@ -29,7 +29,6 @@ TEST_CONFIGS = [
         "epsilon": 1.0,
         "epsilon_min": 0.1,
         "epsilon_decay": 0.99,
-        "num_episodes": 300,
     },
     {
         "name": "config_3",
@@ -38,59 +37,69 @@ TEST_CONFIGS = [
         "epsilon": 1.0,
         "epsilon_min": 0.05,
         "epsilon_decay": 0.98,
-        "num_episodes": 300,
     },
 ]
+
+# =========================
+# NOMBRE D'ÉPISODES À TESTER
+# =========================
+EPISODE_CONFIGS = [1000, 10000, 100000, 1000000]
 
 
 # =========================
 # RUN TEST
 # =========================
-def run_test(config):
+def run_test(base_config, num_episodes):
     env = GridWorld(size=5)
 
     agent = TabularQLearningAgent(
-        alpha=config["alpha"],
-        gamma=config["gamma"],
-        epsilon=config["epsilon"],
-        epsilon_min=config["epsilon_min"],
-        epsilon_decay=config["epsilon_decay"],
+        alpha=base_config["alpha"],
+        gamma=base_config["gamma"],
+        epsilon=base_config["epsilon"],
+        epsilon_min=base_config["epsilon_min"],
+        epsilon_decay=base_config["epsilon_decay"],
     )
 
+    # ⏱️ START
+    start_time = time.time()
+
     # TRAIN
-    training_scores = agent.train(env, num_episodes=config["num_episodes"])
+    agent.train(env, num_episodes=num_episodes)
 
     # EVALUATE
     avg_score = agent.evaluate(env, num_episodes=50)
 
+    # ⏱️ END
+    end_time = time.time()
+    execution_time = end_time - start_time
+
     return {
-        "config_name": config["name"],
-        "alpha": config["alpha"],
-        "gamma": config["gamma"],
-        "epsilon_start": config["epsilon"],
-        "epsilon_min": config["epsilon_min"],
-        "epsilon_decay": config["epsilon_decay"],
-        "num_episodes": config["num_episodes"],
+        "config_name": base_config["name"],
+        "alpha": base_config["alpha"],
+        "gamma": base_config["gamma"],
+        "epsilon_start": base_config["epsilon"],
+        "epsilon_min": base_config["epsilon_min"],
+        "epsilon_decay": base_config["epsilon_decay"],
+        "num_episodes": num_episodes,
         "avg_score": avg_score,
         "final_epsilon": agent.epsilon,
+        "execution_time_sec": execution_time,  # 👈 AJOUT
     }
 
 
 # =========================
 # SAVE RESULTS
 # =========================
-def save_results(results, file_path="results/gridworld_tabular_q_learning_results.csv"):
+def save_results(results_list, file_path="results/gridworld_tabular_q_learning_results.csv"):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-    file_exists = os.path.isfile(file_path)
+    if not results_list:
+        return
 
-    with open(file_path, mode="a", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=results.keys())
-
-        if not file_exists:
-            writer.writeheader()
-
-        writer.writerow(results)
+    with open(file_path, mode="w", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=results_list[0].keys())
+        writer.writeheader()
+        writer.writerows(results_list)
 
 
 # =========================
@@ -99,15 +108,19 @@ def save_results(results, file_path="results/gridworld_tabular_q_learning_result
 if __name__ == "__main__":
     all_results = []
 
-    for config in TEST_CONFIGS:
-        print(f"\n=== Running {config['name']} ===")
+    for base_config in BASE_CONFIGS:
+        for num_episodes in EPISODE_CONFIGS:
+            print(f"\n=== Running {base_config['name']} with {num_episodes} episodes ===")
 
-        results = run_test(config)
-        all_results.append(results)
+            results = run_test(base_config, num_episodes)
+            all_results.append(results)
 
-        for k, v in results.items():
-            print(f"{k}: {v}")
+            for k, v in results.items():
+                if k == "execution_time_sec":
+                    print(f"{k}: {v:.2f} sec")  # 👈 affichage propre
+                else:
+                    print(f"{k}: {v}")
 
-        save_results(results)
+    save_results(all_results)
 
     print("\n=== DONE ===")
