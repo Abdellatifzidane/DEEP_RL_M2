@@ -1,7 +1,7 @@
 import sys
 import os
 import csv
-import time  # 👈 AJOUT
+import time  
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -76,7 +76,7 @@ def run_test(config):
         "num_episodes": config["num_episodes"],
         "avg_score": avg_score,
         "avg_reward": avg_reward,
-        "execution_time_sec": execution_time,  # 👈 AJOUT
+        "execution_time_sec": execution_time,  
     }
 
 
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         print("=== RESULTS ===")
         for k, v in results.items():
             if k == "execution_time_sec":
-                print(f"{k}: {v:.2f} sec")  # 👈 affichage propre
+                print(f"{k}: {v:.2f} sec")  
             else:
                 print(f"{k}: {v}")
 
