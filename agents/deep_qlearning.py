@@ -76,7 +76,10 @@ class DQNAgent:
         self.replay_buffer = ReplayBuffer(buffer_capacity)
 
     def _state_to_array(self, state):
-        return np.array(state, dtype=np.float32)
+        arr = np.array(state, dtype=np.float32)
+        if arr.ndim == 0:
+            arr = arr.reshape(1)
+        return arr
 
     def _state_to_tensor(self, state):
         state_array = self._state_to_array(state)

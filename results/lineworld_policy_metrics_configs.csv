@@ -1,0 +1,17 @@
+agent,config,training_episodes,avg_score,eval_episodes
+random,config_1,0,-0.6,10
+tabular_qlearning,config_1,1000,1.0,10
+tabular_qlearning,config_1,10000,1.0,10
+tabular_qlearning,config_1,100000,1.0,10
+tabular_qlearning,config_2,1000,1.0,10
+tabular_qlearning,config_2,10000,1.0,10
+tabular_qlearning,config_2,100000,1.0,10
+tabular_qlearning,config_3,1000,1.0,10
+tabular_qlearning,config_3,10000,1.0,10
+tabular_qlearning,config_3,100000,1.0,10
+dqn,config_1,1000,1.0,10
+dqn,config_1,10000,1.0,10
+dqn,config_2,1000,1.0,10
+dqn,config_2,10000,1.0,10
+dqn,config_3,1000,0.0,10
+dqn,config_3,10000,1.0,10

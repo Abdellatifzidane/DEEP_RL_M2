@@ -1,3 +1,5 @@
 test_name,num_episodes,avg_score,avg_reward
 random_baseline,50,-0.48,-0.48
 random_baseline,50,-0.52,-0.52
+random_baseline,50,-0.44,-0.44
+random_baseline,50,-0.2,-0.2
