@@ -1,12 +1,14 @@
 import csv
 import os
 import sys
+import time
 
 # Fix import path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from environnements.test_env.tic_tac_toe import TicTacToe
 from agents.tabular_qlearning import TabularQLearningAgent
+from evaluate.tracker import RLTracker
 
 
 # =========================
@@ -57,11 +59,31 @@ def run_test(config):
         epsilon_decay=config["epsilon_decay"],
     )
 
+    # --- RLTracker ---
+    tracker = RLTracker(
+        agent_name="TabularQL",
+        env_name="TicTacToe",
+        config=config,
+        run_name=f"{config['name']}_{config['num_episodes']}ep",
+    )
+
+    start_time = time.time()
+
     # TRAIN
     training_scores = agent.train(env, num_episodes=config["num_episodes"])
 
+    for i, score in enumerate(training_scores):
+        tracker.log_episode(i, score=score, epsilon=agent.epsilon)
+
     # EVALUATE
     avg_score = agent.evaluate(env, num_episodes=100)
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+
+    tracker.log_evaluation(config["num_episodes"], avg_score=avg_score)
+    tracker.log_move_time(execution_time / max(len(training_scores), 1))
+    tracker.finish()
 
     return {
         "config_name": config["name"],
@@ -73,6 +95,7 @@ def run_test(config):
         "num_episodes": config["num_episodes"],
         "avg_score": avg_score,
         "final_epsilon": agent.epsilon,
+        "execution_time_sec": execution_time,
     }
 
 

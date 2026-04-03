@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from environnements.test_env.grid_world import GridWorld
 from agents.deep_qlearning import DQNAgent
+from evaluate.tracker import RLTracker
 
 
 # =========================
@@ -71,13 +72,34 @@ def run_test(base_config, num_episodes):
         batch_size=base_config["batch_size"],
         target_update_freq=base_config["target_update_freq"],
     )
+
+    # --- RLTracker ---
+    tracker = RLTracker(
+        agent_name="DQN",
+        env_name="GridWorld",
+        config=base_config,
+        run_name=f"{base_config['name']}_{num_episodes}ep",
+    )
+
     #  START TIMER
     start_time = time.time()
     train_scores, train_losses = agent.train(env, num_episodes=num_episodes)
+
+    # Log chaque épisode dans TensorBoard
+    for i, score in enumerate(train_scores):
+        loss = train_losses[i] if i < len(train_losses) else None
+        tracker.log_episode(i, score=score, loss=loss, epsilon=agent.epsilon)
+
     avg_score = agent.evaluate(env, num_episodes=base_config["eval_episodes"])
     #  END TIMER
     end_time = time.time()
     execution_time = end_time - start_time
+
+    # Log évaluation + temps par coup
+    tracker.log_evaluation(num_episodes, avg_score=avg_score)
+    tracker.log_move_time(execution_time / max(sum(1 for _ in train_scores), 1))
+    tracker.finish()
+
     avg_train_score = sum(train_scores) / len(train_scores) if train_scores else None
     avg_train_loss = sum(train_losses) / len(train_losses) if train_losses else None
 
