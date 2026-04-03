@@ -1,12 +1,13 @@
 import sys
 import os
 import csv
-import time  
+import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from environnements.test_env.grid_world import GridWorld
 from agents.random import RandomAgent
+from evaluate.tracker import RLTracker
 
 
 # =========================
@@ -43,10 +44,18 @@ def run_test(config):
     env = GridWorld(size=config["grid_size"])
     agent = RandomAgent()
 
+    # --- RLTracker ---
+    tracker = RLTracker(
+        agent_name="Random",
+        env_name="GridWorld",
+        config=config,
+        run_name=f"{config['test_name']}",
+    )
+
     scores = []
     total_rewards = []
 
-    # ⏱️ START
+    # START
     start_time = time.time()
 
     for episode in range(config["num_episodes"]):
@@ -62,12 +71,18 @@ def run_test(config):
         scores.append(score)
         total_rewards.append(episode_reward)
 
-    # ⏱️ END
+        tracker.log_episode(episode, score=score)
+
+    # END
     end_time = time.time()
     execution_time = end_time - start_time
 
     avg_score = sum(scores) / len(scores)
     avg_reward = sum(total_rewards) / len(total_rewards)
+
+    tracker.log_evaluation(config["num_episodes"], avg_score=avg_score)
+    tracker.log_move_time(execution_time / max(len(scores), 1))
+    tracker.finish()
 
     return {
         "test_name": config["test_name"],
@@ -76,7 +91,7 @@ def run_test(config):
         "num_episodes": config["num_episodes"],
         "avg_score": avg_score,
         "avg_reward": avg_reward,
-        "execution_time_sec": execution_time,  
+        "execution_time_sec": execution_time,
     }
 
 
@@ -109,7 +124,7 @@ if __name__ == "__main__":
         print("=== RESULTS ===")
         for k, v in results.items():
             if k == "execution_time_sec":
-                print(f"{k}: {v:.2f} sec")  
+                print(f"{k}: {v:.2f} sec")
             else:
                 print(f"{k}: {v}")
 
