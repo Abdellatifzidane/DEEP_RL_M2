@@ -11,7 +11,7 @@ from agents.deep_qlearning import DQNAgent
 TEST_CONFIGS = [
     {
         "name": "config_1",
-        "state_size": 1,
+        "state_size": 5,
         "action_size": 2,
         "hidden_dim": 128,
         "lr": 1e-3,
@@ -27,7 +27,7 @@ TEST_CONFIGS = [
     },
     {
         "name": "config_2",
-        "state_size": 1,
+        "state_size": 5,
         "action_size": 2,
         "hidden_dim": 64,
         "lr": 5e-4,
@@ -43,7 +43,7 @@ TEST_CONFIGS = [
     },
     {
         "name": "config_3",
-        "state_size": 1,
+        "state_size": 5,
         "action_size": 2,
         "hidden_dim": 128,
         "lr": 1e-4,
