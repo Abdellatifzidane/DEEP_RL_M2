@@ -4,12 +4,14 @@ Chaque joueur appelle step() à son tour.
 """
 import sys
 import os
+import csv
+import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import csv
 
 from environnements.quarto.quatro import Quatro
 from agents.random import RandomAgent
+from evaluate.tracker import RLTracker
 
 
 # =========================
@@ -29,9 +31,19 @@ def run_test(config):
     player2 = RandomAgent()
     players = [player1, player2]
 
+    # --- RLTracker ---
+    tracker = RLTracker(
+        agent_name="Random_vs_Random",
+        env_name="Quarto",
+        config=config,
+        run_name=config["test_name"],
+    )
+
     wins_p1 = 0
     wins_p2 = 0
     draws = 0
+
+    start_time = time.time()
 
     for episode in range(config["num_episodes"]):
         env = Quatro()
@@ -54,15 +66,29 @@ def run_test(config):
         if env.get_score() == 0.0 and env.is_terminal():
             draws += 1
 
+        # Log le score du point de vue du joueur 1
+        score = env.get_score()
+        tracker.log_episode(episode, score=score)
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+
     total = config["num_episodes"]
+    win_rate_p1 = round(wins_p1 / total, 3)
+
+    tracker.log_evaluation(total, avg_score=win_rate_p1)
+    tracker.log_move_time(execution_time / max(total, 1))
+    tracker.finish()
+
     return {
         "test_name": config["test_name"],
         "num_episodes": total,
         "wins_player1": wins_p1,
         "wins_player2": wins_p2,
         "draws": draws,
-        "win_rate_p1": round(wins_p1 / total, 3),
+        "win_rate_p1": win_rate_p1,
         "win_rate_p2": round(wins_p2 / total, 3),
+        "execution_time_sec": execution_time,
     }
 
 

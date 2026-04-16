@@ -1,13 +1,14 @@
 import csv
 import os
 import sys
-import time  # 
+import time
 
 # Fix import path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from environnements.test_env.grid_world import GridWorld
 from agents.tabular_qlearning import TabularQLearningAgent
+from evaluate.tracker import RLTracker
 
 
 # =========================
@@ -60,11 +61,23 @@ def run_test(base_config, num_episodes):
         epsilon_decay=base_config["epsilon_decay"],
     )
 
+    # --- RLTracker ---
+    tracker = RLTracker(
+        agent_name="TabularQL",
+        env_name="GridWorld",
+        config=base_config,
+        run_name=f"{base_config['name']}_{num_episodes}ep",
+    )
+
     #  START
     start_time = time.time()
 
     # TRAIN
-    agent.train(env, num_episodes=num_episodes)
+    scores = agent.train(env, num_episodes=num_episodes)
+
+    # Log chaque épisode
+    for i, score in enumerate(scores):
+        tracker.log_episode(i, score=score, epsilon=agent.epsilon)
 
     # EVALUATE
     avg_score = agent.evaluate(env, num_episodes=50)
@@ -72,6 +85,11 @@ def run_test(base_config, num_episodes):
     #  END
     end_time = time.time()
     execution_time = end_time - start_time
+
+    # Log évaluation
+    tracker.log_evaluation(num_episodes, avg_score=avg_score)
+    tracker.log_move_time(execution_time / max(len(scores), 1))
+    tracker.finish()
 
     return {
         "config_name": base_config["name"],
@@ -83,7 +101,7 @@ def run_test(base_config, num_episodes):
         "num_episodes": num_episodes,
         "avg_score": avg_score,
         "final_epsilon": agent.epsilon,
-        "execution_time_sec": execution_time,  
+        "execution_time_sec": execution_time,
     }
 
 
@@ -117,7 +135,7 @@ if __name__ == "__main__":
 
             for k, v in results.items():
                 if k == "execution_time_sec":
-                    print(f"{k}: {v:.2f} sec")  
+                    print(f"{k}: {v:.2f} sec")
                 else:
                     print(f"{k}: {v}")
 

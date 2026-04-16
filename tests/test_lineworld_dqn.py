@@ -1,11 +1,13 @@
 import csv
 import os
 import sys
+import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from environnements.test_env.line_world import LineWorld
 from agents.deep_qlearning import DQNAgent
+from evaluate.tracker import RLTracker
 
 
 TEST_CONFIGS = [
@@ -77,8 +79,28 @@ def run_test(config):
         target_update_freq=config["target_update_freq"],
     )
 
+    # --- RLTracker ---
+    tracker = RLTracker(
+        agent_name="DQN",
+        env_name="LineWorld",
+        config=config,
+        run_name=f"{config['name']}_{config['num_episodes']}ep",
+    )
+
+    start_time = time.time()
     train_scores, train_losses = agent.train(env, num_episodes=config["num_episodes"])
+
+    for i, score in enumerate(train_scores):
+        loss = train_losses[i] if i < len(train_losses) else None
+        tracker.log_episode(i, score=score, loss=loss, epsilon=agent.epsilon)
+
     avg_score = agent.evaluate(env, num_episodes=config["eval_episodes"])
+    end_time = time.time()
+    execution_time = end_time - start_time
+
+    tracker.log_evaluation(config["num_episodes"], avg_score=avg_score)
+    tracker.log_move_time(execution_time / max(len(train_scores), 1))
+    tracker.finish()
 
     avg_train_score = sum(train_scores) / len(train_scores) if train_scores else None
     avg_train_loss = sum(train_losses) / len(train_losses) if train_losses else None
@@ -100,6 +122,7 @@ def run_test(config):
         "avg_train_loss": avg_train_loss,
         "avg_score": avg_score,
         "final_epsilon": agent.epsilon,
+        "execution_time_sec": execution_time,
     }
 
 
