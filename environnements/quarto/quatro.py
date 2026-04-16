@@ -35,6 +35,7 @@ class Quatro(BaseEnv):
         self.done = False
         self._score = 0.0
         self.current_player = 0  # 0 ou 1
+        self.aa_buffer = []
 
 
     def reset(self):
@@ -45,21 +46,29 @@ class Quatro(BaseEnv):
         self.done = False
         self._score = 0.0
         self.current_player = 0
+        self.aa_buffer.clear()
         return self.get_state()
 
     def get_state(self):
         return tuple(self._build_state_list())
 
     def get_available_actions(self):
+        self.aa_buffer.clear()
         if self.done:
             return []
 
         if self.current_piece is None:
             # type 0 : choisir une pièce
-            return [(0, i) for i, v in enumerate(self.ramaining_pieces) if v == 1]
+            for i, v in enumerate(self.ramaining_pieces):
+                if v == 1:
+                    self.aa_buffer.append((0, i))
+            return self.aa_buffer
         else:
             # type 1 : poser la pièce courante
-            return [(1, j) for j, v in enumerate(self.remaining_cells) if v == 1]
+            for j, v in enumerate(self.remaining_cells):
+                if v == 1:
+                    self.aa_buffer.append((1, j))
+            return self.aa_buffer
 
     def step(self, action):
         if self.done:

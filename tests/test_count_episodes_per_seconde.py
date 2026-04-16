@@ -17,9 +17,9 @@ players = [player1, player2]
 
 count = 0
 start = time.time()
+env = Quatro()
 
-while time.time() - start < 1.0:
-    env = Quatro()
+while time.time() - start < 10.0:
     env.reset()
 
     while not env.is_terminal():
@@ -27,7 +27,7 @@ while time.time() - start < 1.0:
         action = current.choose_action(env)
         env.step(action)
 
-    count += 1
+    count += 1 
 
 elapsed = time.time() - start
 print(f"{count} épisodes en {elapsed:.2f}s ({count / elapsed:.0f} épisodes/s)")
