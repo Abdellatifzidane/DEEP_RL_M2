@@ -1,3 +1,0 @@
-test_name,grid_size,num_episodes,avg_score,avg_reward
-random_baseline,5,50,0.1,-0.14120000000000002
-random_baseline,5,50,0.24,0.012799999999999952
