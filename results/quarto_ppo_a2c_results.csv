@@ -1,0 +1,8 @@
+config_name,name,avg_score,update_interval,batch_size,state_dim,k_epochs,env,avg_move_time_sec,execution_time_sec,avg_steps,agent,eval_games,eps_clip,action_dim,gamma,hidden_dim,lr,num_episodes
+config_1_1000ep,config_1,0.5,20,64,68,4,Quarto,0.01364004135131836,13.64,21.92,PPO_A2C,50,0.2,32,0.99,128,0.001,1000
+config_2_1000ep,config_2,0.68,10,128,68,8,Quarto,0.0175465042591095,17.55,22.28,PPO_A2C,50,0.1,32,0.95,256,0.0003,1000
+config_3_1000ep,config_3,0.5,30,64,68,4,Quarto,0.015412721633911133,15.42,22.4,PPO_A2C,50,0.2,32,0.99,128,0.0005,1000
+config_1_1000ep,config_1,0.5,20,64,68,4,Quarto,0.00786263942718506,7.87,22.0,PPO_A2C,50,0.2,32,0.99,128,0.001,1000
+config_2_1000ep,config_2,0.58,10,128,68,8,Quarto,0.010415996789932252,10.42,21.2,PPO_A2C,50,0.1,32,0.95,256,0.0003,1000
+config_3_1000ep,config_3,0.54,30,64,68,4,Quarto,0.008542518377304078,8.55,23.44,PPO_A2C,50,0.2,32,0.99,128,0.0005,1000
+config_2_10000ep,config_2,0.56,10,128,68,8,Quarto,0.012217168521881103,122.18,23.32,PPO_A2C,50,0.1,32,0.95,256,0.0003,10000
