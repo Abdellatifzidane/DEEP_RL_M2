@@ -26,7 +26,7 @@ from torch.utils.tensorboard import SummaryWriter
 class RLTracker:
     """Composant unifié de logging pour tous les agents et environnements."""
 
-    EVAL_MILESTONES = [1_000, 10_000, 100_000, 1_000_000]
+    EVAL_MILESTONES = [1_000, 10_000, 100_000, 200_000, 300_000, 400_000, 500_000, 1_000_000]
 
     def __init__(
         self,
