@@ -52,3 +52,7 @@ class BaseEnv(ABC):
         Optionnel : score final de l'épisode.
         """
         return None
+
+    @abstractmethod
+    def action_to_index(self, action):
+        pass

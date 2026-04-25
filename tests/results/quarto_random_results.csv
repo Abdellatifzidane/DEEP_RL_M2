@@ -1,2 +1,0 @@
-test_name,num_episodes,avg_score,avg_reward,wins,losses,draws
-random_baseline,1000,0.012,0.012,495,483,22
