@@ -174,3 +174,17 @@ class Quatro(BaseEnv):
                 if pa[attr] == pb[attr] == pc[attr] == pd[attr]:
                     return True
         return False
+
+    def clone(self):
+        """Copie de l'env pour les simulations MCTS."""
+        c = Quatro.__new__(Quatro)
+        c._state = self._state.copy()
+        c.board = self.board[:]
+        c.remaining_pieces = self.remaining_pieces[:]
+        c.remaining_cells = self.remaining_cells[:]
+        c.current_piece = self.current_piece
+        c.done = self.done
+        c._score = self._score
+        c.current_player = self.current_player
+        c.aa_buffer = []
+        return c

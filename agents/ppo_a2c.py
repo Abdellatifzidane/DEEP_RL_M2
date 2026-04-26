@@ -56,6 +56,7 @@ class PPO_A2C:
             'states': [],
             'actions': [],
             'logprobs': [],
+            'masks': [],
             'rewards': [],
             'is_terminals': [],
             'values': []
@@ -71,14 +72,22 @@ class PPO_A2C:
             mask = torch.zeros_like(action_probs)
             mask[0, available_actions] = 1
             action_probs = action_probs * mask
-            action_probs = action_probs / action_probs.sum()
+            prob_sum = action_probs.sum()
+            if prob_sum > 0 and not torch.isnan(prob_sum):
+                action_probs = action_probs / prob_sum
+            else:
+                action_probs = mask / mask.sum()
+        else:
+            mask = torch.ones_like(action_probs)
 
         dist = torch.distributions.Categorical(action_probs)
-        action = dist.sample()
+
+        action = dist.sample() # ici on prend pas argmax, pour explorer plus 
 
         self.memory['states'].append(state)
         self.memory['actions'].append(action)
         self.memory['logprobs'].append(dist.log_prob(action))
+        self.memory['masks'].append(mask)
         self.memory['values'].append(value)
 
         return action.item()
@@ -106,12 +115,18 @@ class PPO_A2C:
         old_states = torch.cat(self.memory['states']).detach()
         old_actions = torch.cat(self.memory['actions']).detach()
         old_logprobs = torch.cat(self.memory['logprobs']).detach()
+        old_masks = torch.cat(self.memory['masks']).detach()
         old_values = torch.cat(self.memory['values']).detach().squeeze()
 
         advantages = rewards - old_values
 
         for _ in range(self.k_epochs):
             action_probs, values = self.policy(old_states)
+            # Appliquer le même masque que lors de la collecte
+            action_probs = action_probs * old_masks
+            prob_sums = action_probs.sum(dim=-1, keepdim=True)
+            prob_sums = prob_sums.clamp(min=1e-8)
+            action_probs = action_probs / prob_sums
             dist = torch.distributions.Categorical(action_probs)
 
             new_logprobs = dist.log_prob(old_actions)
@@ -142,6 +157,7 @@ class PPO_A2C:
             'states': [],
             'actions': [],
             'logprobs': [],
+            'masks': [],
             'rewards': [],
             'is_terminals': [],
             'values': []

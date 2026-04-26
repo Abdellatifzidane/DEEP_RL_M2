@@ -1,0 +1,4 @@
+execution_time_sec,num_episodes,agent,env,avg_steps,config_name,avg_move_time_sec,num_simulations,avg_score,num_games
+1.84,100,MCTS,Quarto,16.68,mcts_100sims,0.004388483879949263,100,0.92,50
+10.19,500,MCTS,Quarto,17.48,mcts_500sims,0.02329549964014398,500,1.0,50
+23.06,1000,MCTS,Quarto,17.88,mcts_1000sims,0.05157833931430074,1000,1.0,50

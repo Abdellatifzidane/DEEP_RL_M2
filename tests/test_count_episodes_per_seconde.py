@@ -19,7 +19,7 @@ count = 0
 start = time.time()
 env = Quatro()
 
-while time.time() - start < 10.0:
+while time.time() - start < 1.0:
     env.reset()
 
     while not env.is_terminal():

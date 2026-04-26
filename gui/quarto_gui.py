@@ -3,13 +3,18 @@ import sys
 import os
 import threading
 import time
+import random
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from quatro import Quatro, PIECES, BOARD_SIZE, NB_PIECES
-from players import RandomPlayer, AgentPlayer, PlayerType
-from game import game, CHOOSE_PIECE, PLACE_PIECE
-from gui.GUIPalyer import GUIPlayer
+import torch
+import numpy as np
+from environnements.quarto.quatro import Quatro, PIECES, BOARD_SIZE, NB_PIECES, ACTION_SIZE, STATE_SIZE
+from agents.alpha_zero import AlphaZeroAgent
+
+# --- Chemins modeles ---
+MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models")
+AZ_MODEL_PATH = os.path.join(MODEL_DIR, "az_quarto_100000g.pt")
 
 # --- Couleurs ---
 WHITE = (255, 255, 255)
@@ -35,6 +40,10 @@ ATTR_VALUES = {
     3: {1: "Plein", -1: "Creux"},
 }
 
+# --- Types d'action (pour l'affichage) ---
+CHOOSE_PIECE = 0
+PLACE_PIECE = 1
+
 # --- Dimensions ---
 CELL_SIZE = 100
 BOARD_PX = BOARD_SIZE * CELL_SIZE
@@ -47,23 +56,62 @@ STATE_MENU = 0
 STATE_PLAYING = 1
 STATE_GAME_OVER = 2
 
+# --- Types de joueur ---
+PLAYER_HUMAN = 0
+PLAYER_RANDOM = 1
+PLAYER_AGENT = 2
 
-class DelayedPlayer:
-    """Wrapper autour d'un joueur AI pour ajouter un delai visuel."""
-    def __init__(self, player, delay=0.4):
-        self.player = player
-        self.player_type = player.player_type
-        self.delay = delay
 
-    def choose_action(self, action_type, env):
-        time.sleep(self.delay)
-        return self.player.choose_action(action_type, env)
+# ── GUIPlayer (humain via clics) ──────────────────────────────────────────────
 
+class GUIPlayer:
+    """Joueur humain. choose_action() bloque jusqu'a ce que la GUI envoie un clic."""
+
+    def __init__(self):
+        self._event = threading.Event()
+        self._choice = None
+        self.waiting_for = None  # CHOOSE_PIECE ou PLACE_PIECE
+
+    def choose_flat_action(self, env):
+        """Bloque jusqu'au clic, retourne une action plate (0-31)."""
+        if env.current_piece is None:
+            self.waiting_for = CHOOSE_PIECE
+        else:
+            self.waiting_for = PLACE_PIECE
+
+        self._event.clear()
+        self._choice = None
+        self._event.wait()
+        self.waiting_for = None
+        return self._choice
+
+    def set_choice(self, flat_action):
+        """Appelee par la GUI quand l'utilisateur clique."""
+        self._choice = flat_action
+        self._event.set()
+
+
+# ── Chargement AlphaZero ──────────────────────────────────────────────────────
+
+_az_agent = None
+
+def get_alphazero_agent():
+    global _az_agent
+    if _az_agent is None:
+        _az_agent = AlphaZeroAgent(
+            state_dim=STATE_SIZE, action_dim=ACTION_SIZE,
+            hidden_dim=256, num_simulations=200,
+        )
+        _az_agent.load(AZ_MODEL_PATH)
+        _az_agent.network.eval()
+        print(f"AlphaZero charge depuis {AZ_MODEL_PATH}")
+    return _az_agent
+
+
+# ── Dessin de piece ───────────────────────────────────────────────────────────
 
 def draw_piece(screen, piece, cx, cy, size, selected=False):
-    """Dessine une piece avec ses 4 attributs:
-    taille(grand/petit), couleur(rouge/bleu), forme(cercle/carre), remplissage(plein/creux)
-    """
+    """Dessine une piece avec ses 4 attributs."""
     p_size, p_color, p_shape, p_fill = piece
     r = int(size * 0.42) if p_size == 1 else int(size * 0.28)
     color = RED if p_color == 1 else BLUE
@@ -79,6 +127,8 @@ def draw_piece(screen, piece, cx, cy, size, selected=False):
         pygame.draw.rect(screen, color, rect, width)
 
 
+# ── GUI principale ────────────────────────────────────────────────────────────
+
 class QuartoGUI:
     def __init__(self):
         pygame.init()
@@ -90,20 +140,23 @@ class QuartoGUI:
         self.font_small = pygame.font.SysFont("Arial", 14)
 
         self.state = STATE_MENU
-        self.game_obj = None
-        self.gui_players = []  # references vers les GUIPlayer pour leur envoyer les clics
+        self.env = None
+        self.players = [None, None]       # objets joueur (GUIPlayer ou None pour AI)
+        self.player_types = [0, 0]        # PLAYER_HUMAN / RANDOM / AGENT
+        self.current_player_index = 0     # 0 ou 1
+        self.gui_players = []
         self.game_thread = None
-        self.winner = None  # 0, 1, ou -1 (nul)
+        self.winner = None                # 0, 1, ou -1 (nul)
         self.game_finished = False
 
         self.hover_cell = None
         self.hover_piece = None
-        self.winning_line = None   # liste de 4 indices de cellules
-        self.winning_attr = None   # indice de l'attribut partage (0-3)
+        self.winning_line = None
+        self.winning_attr = None
 
-        # Menu: 0=Humain, 1=Random, 2=Agent
-        self.menu_choices = [0, 1]
-        self.player_labels = ["Humain", "Random", "Agent"]
+        # Menu: 0=Humain, 1=Random, 2=Agent (AlphaZero)
+        self.menu_choices = [0, 2]
+        self.player_labels = ["Humain", "Random", "AlphaZero"]
 
     # ========== MENU ==========
     def draw_menu(self):
@@ -151,47 +204,70 @@ class QuartoGUI:
             self.start_new_game()
 
     # ========== LANCEMENT ==========
-    def make_player(self, choice):
-        """Cree un joueur selon le choix du menu."""
-        if choice == 0:
-            p = GUIPlayer()
-            self.gui_players.append(p)
-            return p
-        elif choice == 1:
-            return DelayedPlayer(RandomPlayer())
-        else:
-            # Agent pas implemente, fallback Random
-            return DelayedPlayer(RandomPlayer())
-
     def start_new_game(self):
         self.gui_players = []
-        env = Quatro()
-        p1 = self.make_player(self.menu_choices[0])
-        p2 = self.make_player(self.menu_choices[1])
-        self.game_obj = game(env, p1, p2)
+        self.env = Quatro()
+        self.env.reset()
+        self.current_player_index = 0
+
+        for i in range(2):
+            choice = self.menu_choices[i]
+            self.player_types[i] = choice
+            if choice == PLAYER_HUMAN:
+                gp = GUIPlayer()
+                self.players[i] = gp
+                self.gui_players.append(gp)
+            elif choice == PLAYER_AGENT:
+                self.players[i] = get_alphazero_agent()
+            else:
+                self.players[i] = None  # Random
+
         self.winner = None
         self.game_finished = False
         self.winning_line = None
         self.winning_attr = None
         self.state = STATE_PLAYING
 
-        # Lancer la boucle de jeu dans un thread
         self.game_thread = threading.Thread(target=self._run_game, daemon=True)
         self.game_thread.start()
 
     def _run_game(self):
-        """Execute game.start_game_without_print() dans un thread separe."""
-        self.game_obj.start_game_without_print()
-        # Quand le thread se termine, determiner le resultat
-        if self.game_obj.env.check_win():
-            self.winner = self.game_obj.current_player_index
+        """Boucle de jeu utilisant env.step() directement."""
+        env = self.env
+
+        while not env.is_terminal():
+            available = env.get_available_actions()
+            if not available:
+                break
+
+            cp = env.current_player
+            player = self.players[cp]
+            ptype = self.player_types[cp]
+
+            if ptype == PLAYER_HUMAN:
+                # Bloque jusqu'au clic
+                action = player.choose_flat_action(env)
+            elif ptype == PLAYER_AGENT:
+                # AlphaZero : MCTS + reseau
+                time.sleep(0.3)  # delai visuel
+                action = player.select_action(env)
+            else:
+                # Random
+                time.sleep(0.3)
+                action = random.choice(list(available))
+
+            env.step(action)
+
+        # Determiner le gagnant
+        if env.get_score() > 0:
+            self.winner = env.current_player
         else:
-            self.winner = -1  # match nul
+            self.winner = -1
         self.game_finished = True
 
     # ========== DESSIN PLATEAU ==========
     def draw_board(self):
-        env = self.game_obj.env
+        env = self.env
         board_rect = pygame.Rect(0, 0, BOARD_PX, BOARD_PX)
         pygame.draw.rect(self.screen, WHITE, board_rect)
 
@@ -238,7 +314,7 @@ class QuartoGUI:
 
     # ========== PANNEAU LATERAL ==========
     def draw_panel(self):
-        env = self.game_obj.env
+        env = self.env
         panel_x = BOARD_PX
         pygame.draw.rect(self.screen, BG_COLOR, (panel_x, 0, PANEL_W, BOARD_PX))
         pygame.draw.line(self.screen, BLACK, (panel_x, 0), (panel_x, BOARD_PX), 2)
@@ -253,7 +329,7 @@ class QuartoGUI:
         gui_waiting_choose = self._get_waiting_action() == CHOOSE_PIECE
 
         for i in range(NB_PIECES):
-            if not env.ramaining_pieces[i]:
+            if not env.remaining_pieces[i]:
                 continue
             row = i // 4
             col = i % 4
@@ -281,23 +357,27 @@ class QuartoGUI:
         bar = pygame.Rect(0, BOARD_PX, WINDOW_W, 60)
         pygame.draw.rect(self.screen, (60, 60, 60), bar)
 
-        g = self.game_obj
-        cp = g.current_player_index
-        player_type = self.player_labels[self.menu_choices[cp]]
+        env = self.env
+        cp = env.current_player
+        player_type = self.player_labels[self.player_types[cp]]
         waiting = self._get_waiting_action()
 
-        if waiting == CHOOSE_PIECE:
+        if env.current_piece is None:
             action_txt = "choisit une piece pour l'adversaire"
-        elif waiting == PLACE_PIECE:
-            action_txt = "place la piece sur le plateau"
         else:
-            action_txt = "..."
+            action_txt = "place la piece sur le plateau"
+
+        if waiting is not None:
+            # Humain en attente → afficher le message d'action
+            pass
+        elif not self.game_finished:
+            action_txt = "reflechit..."
 
         msg = f"Joueur {cp + 1} ({player_type}) {action_txt}"
         txt = self.font.render(msg, True, WHITE)
         self.screen.blit(txt, (10, BOARD_PX + 20))
 
-        turn_num = 16 - sum(g.env.remaining_cells)
+        turn_num = 16 - sum(env.remaining_cells)
         t = self.font_small.render(f"Tour: {turn_num}/16", True, GRAY)
         self.screen.blit(t, (WINDOW_W - 80, BOARD_PX + 22))
 
@@ -308,7 +388,7 @@ class QuartoGUI:
         self.screen.blit(overlay, (0, 0))
 
         if self.winner >= 0:
-            pt = self.player_labels[self.menu_choices[self.winner]]
+            pt = self.player_labels[self.player_types[self.winner]]
             msg = f"Joueur {self.winner + 1} ({pt}) a gagne!"
             color = GREEN
         else:
@@ -320,7 +400,7 @@ class QuartoGUI:
 
         # Afficher l'attribut partage
         if self.winning_attr is not None:
-            pieces = [self.game_obj.env.board[i] for i in self.winning_line]
+            pieces = [self.env.board[i] for i in self.winning_line]
             val = pieces[0][self.winning_attr]
             attr_name = ATTR_NAMES[self.winning_attr]
             attr_val = ATTR_VALUES[self.winning_attr][val]
@@ -343,7 +423,7 @@ class QuartoGUI:
     # ========== DETECTION LIGNE GAGNANTE ==========
     def find_winning_line(self):
         """Retrouve l'alignement gagnant et l'attribut partage."""
-        board = self.game_obj.env.board
+        board = self.env.board
         alignments = [
             [0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15],
             [0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15],
@@ -377,12 +457,12 @@ class QuartoGUI:
         return None
 
     def handle_game_click(self, pos):
-        """Transmet le clic au GUIPlayer qui attend."""
+        """Transmet le clic au GUIPlayer qui attend, en action plate (0-31)."""
         gp = self._get_waiting_gui_player()
         if gp is None:
             return
 
-        env = self.game_obj.env
+        env = self.env
         x, y = pos
 
         if gp.waiting_for == PLACE_PIECE and x < BOARD_PX and y < BOARD_PX:
@@ -390,7 +470,7 @@ class QuartoGUI:
             row = y // CELL_SIZE
             idx = row * BOARD_SIZE + col
             if env.remaining_cells[idx]:
-                gp.set_choice(idx)
+                gp.set_choice(NB_PIECES + idx)  # action plate 16-31
 
         elif gp.waiting_for == CHOOSE_PIECE and x >= BOARD_PX:
             area_x = BOARD_PX + 15
@@ -403,8 +483,8 @@ class QuartoGUI:
                 row = y_rel // spacing
                 if 0 <= col < 4 and 0 <= row < 4:
                     idx = row * 4 + col
-                    if idx < 16 and env.ramaining_pieces[idx]:
-                        gp.set_choice(idx)
+                    if idx < 16 and env.remaining_pieces[idx]:
+                        gp.set_choice(idx)  # action plate 0-15
 
     def update_hover(self, pos):
         x, y = pos
@@ -460,7 +540,6 @@ class QuartoGUI:
                 self.draw_panel()
                 self.draw_status_bar()
 
-                # Verifier si le thread de jeu a termine
                 if self.game_finished:
                     self.find_winning_line()
                     self.state = STATE_GAME_OVER

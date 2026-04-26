@@ -1,0 +1,11 @@
+agent_a,agent_b,wins_a,wins_b,draws,total
+AlphaZero,ExIt,200,0,0,200
+AlphaZero,PPO,200,0,0,200
+AlphaZero,MCTS,114,47,39,200
+AlphaZero,Random,199,0,1,200
+ExIt,PPO,200,0,0,200
+ExIt,MCTS,30,170,0,200
+ExIt,Random,167,30,3,200
+PPO,MCTS,23,177,0,200
+PPO,Random,158,42,0,200
+MCTS,Random,196,4,0,200
